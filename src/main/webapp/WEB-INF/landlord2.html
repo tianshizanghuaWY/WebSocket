@@ -1,0 +1,116 @@
+<html xmlns="http://www.w3.org/1999/xhtml">  
+<head>  
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
+<title></title>
+    <style>
+        #main{width:1060px;height:auto;}
+        #left{width:500px;height:600px;}
+        #right{width:500px;height:600px;margin-left:60px;}
+        #left,#right{float:left;}
+    </style>
+    <script type="text/javascript" src="util.js"></script>
+</head>
+<body>
+<div id="main">
+    <div id="left">
+        <h3>房东二 **** 租客一</h3>
+        <div>
+            <textarea id="dialog1" style="width: 500px;height: 400px;"></textarea>
+        </div>
+        <div style="padding-top: 20px">
+            <textarea id="message1" style="width: 500px;height: 100px;"></textarea>
+        </div>
+        <div style="width:100px; height:100px;">
+            <button type="button1" name="send" style="width:60px; height:30px;" onclick="send1()"> send </button>
+        </div>
+    </div>
+    <div id="right">
+        <h3>房东二 **** 租客二</h3>
+        <div>
+            <textarea id="dialog2" style="width: 500px;height: 400px;"></textarea>
+        </div>
+        <div style="padding-top: 20px">
+            <textarea id="message2" style="width: 500px;height: 100px;"></textarea>
+        </div>
+        <div style="width:100px; height:100px;">
+            <button type="button2" name="send" style="width:60px; height:30px;" onclick="send2()"> send </button>
+        </div>
+    </div>
+</div>
+
+</body>
+
+<script type="text/javascript">
+  var socket;
+  //landlordId
+  var id  = 2;
+  if(!window.WebSocket){  
+      window.WebSocket = window.MozWebSocket;  
+  }
+  if(window.WebSocket){  
+      socket = new WebSocket("ws://localhost:8181/0/" + id);
+        
+      socket.onmessage = function(event){
+          var wsMessage = JSON.parse(event.data);
+          console.info("on message:" + event.data);
+          var from = wsMessage.from;
+          var ctctIdSource = from.ctctIdSource;
+          var ctctId = from.ctctId;
+          if(ctctIdSource == "1"){
+              appendln("租客：" + wsMessage.message, ctctId);
+          }else if(ctctIdSource == "0"){
+              var to = wsMessage.to;
+              appendln("我：" + wsMessage.message, to.ctctId);
+          }
+      };
+   
+      socket.onopen = function(event){
+          console.info("WebSocket is opened");
+      };
+   
+      socket.onclose = function(event){
+          console.info("WebSocket is opened!");
+      };  
+  }else{  
+      alert("WebSocket is not support");
+  }  
+
+    
+  function appendln(text, ctctId) {
+      if(ctctId == "1"){
+          var ta = document.getElementById('dialog1');
+          ta.value += text + "\r\n";
+      }else if(ctctId == "2"){
+          var ta = document.getElementById('dialog2');
+          ta.value += text + "\r\n";
+      }
+
+  }
+
+  function send1(){
+	  console.log("---------- send message -----------");
+	  var message = document.getElementById('message1').value;
+      var data = {"id": randomString(32), "from":{"ctctId":"2","ctctIdSource":"0"}, "messageType":"TEXT","msgBusinessType":"FIND", "to":{"ctctId":"1","ctctIdSource":"1"}, "message": message};
+	  var wsMessage = JSON.stringify(data);
+
+      appendln("我：" + message, "1");
+	  socket.send(wsMessage);
+
+      document.getElementById('message1').value = "";
+  }
+
+  function send2(){
+      console.log("---------- send message -----------");
+      var message = document.getElementById('message2').value;
+      var data = {"id": randomString(32), "from":{"ctctId":"2","ctctIdSource":"0"},"messageType":"TEXT","msgBusinessType":"FIND","to":{"ctctId":"2","ctctIdSource":"1"}, "message": message};
+      var wsMessage = JSON.stringify(data);
+
+      appendln("我：" + message, "2");
+      socket.send(wsMessage);
+
+      document.getElementById('message2').value = "";
+  }
+        
+</script>
+
+</html> 

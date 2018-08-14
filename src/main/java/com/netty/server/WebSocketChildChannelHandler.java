@@ -3,7 +3,7 @@ package com.netty.server;
 import javax.annotation.Resource;
 
 import com.netty.server.handler.IpCheckHandler;
-import com.netty.server.handler.WsMessageHandler;
+import com.netty.server.handler.TextWebSocketFrameHandler;
 import org.springframework.stereotype.Component;
 
 import io.netty.channel.ChannelHandler;
@@ -19,6 +19,9 @@ public class WebSocketChildChannelHandler extends ChannelInitializer<SocketChann
 	@Resource(name = "webSocketServerHandler")
 	private ChannelHandler webSocketServerHandler;
 
+	@Resource(name = "textWebSocketFrameHandler")
+	private ChannelHandler textWebSocketFrameHandler;
+
 	@Override
 	protected void initChannel(SocketChannel ch) throws Exception {
 		// TODO Auto-generated method stub
@@ -29,7 +32,7 @@ public class WebSocketChildChannelHandler extends ChannelInitializer<SocketChann
 		ch.pipeline().addLast("aggregator", new HttpObjectAggregator(65536));
 		ch.pipeline().addLast("http-chunked", new ChunkedWriteHandler());
 		ch.pipeline().addLast("handler", webSocketServerHandler);
-		ch.pipeline().addLast("wsMessageHandler", new WsMessageHandler());
+		ch.pipeline().addLast("textWebSocketFrameHandler", textWebSocketFrameHandler);
 	}
 
 }

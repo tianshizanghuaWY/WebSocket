@@ -2,9 +2,11 @@ package com.netty.server.handler;
 
 import com.netty.business.BusinessTaskExecutor;
 import com.netty.business.task.AddBlackIpTask;
+import com.netty.util.CommonUtil;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import org.springframework.stereotype.Component;
 
 import com.netty.constant.Constant;
@@ -40,6 +42,7 @@ import java.util.Map;
 @Sharable
 public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> {
 
+	//TODO 需要确认有没有线程安全问题
 	private WebSocketServerHandshaker handshaker;
 
 	/**
@@ -47,8 +50,6 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 	 * */
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		// TODO Auto-generated method stub
-		System.out.println("---------> 连接成功");
 	}
 
 	/**
@@ -56,8 +57,6 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 	 */
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		//多余的
-		//Constant.unregisterChannel(ctx);
 	}
 
 	@Override
@@ -74,7 +73,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if(msg instanceof WebSocketFrame){
 			//WebSocketFrame 合法性校验
-			handlerWebSocketFrame(ctx, (WebSocketFrame)msg);
+			webSocketFrameCheck(ctx, (WebSocketFrame)msg);
 
 			if(msg instanceof TextWebSocketFrame){
 				ctx.fireChannelRead(msg);
@@ -89,12 +88,13 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, Object msg)
 			throws Exception {
-		//http：//xxxx
+
 		if(msg instanceof FullHttpRequest){
+			//http：//xxxx
 			handleHttpRequest(ctx,(FullHttpRequest)msg);
 		}else if(msg instanceof WebSocketFrame){
 			//ws://xxxx
-			handlerWebSocketFrame(ctx,(WebSocketFrame)msg);
+			webSocketFrameCheck(ctx,(WebSocketFrame)msg);
 		}
 	}
 
@@ -104,37 +104,31 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 	 * @param frame
 	 * @throws Exception
 	 */
-	private void handlerWebSocketFrame(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception{
-		System.out.println("---------> 处理websockrt消息");
-		System.out.println("---------> ChannelHandlerContext: " + ctx);
-
-		//关闭请求
-		if(frame instanceof CloseWebSocketFrame){
-			handshaker.close(ctx.channel(), (CloseWebSocketFrame)frame.retain());
-			return;
+	private void webSocketFrameCheck(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception{
+		boolean needRelease = false;
+		try{
+			//关闭请求
+			if(frame instanceof CloseWebSocketFrame){
+				needRelease = true;
+				handshaker.close(ctx.channel(), (CloseWebSocketFrame)frame.retain());
+				return;
+			}
+			//ping请求
+			if(frame instanceof PingWebSocketFrame){
+				needRelease = true;
+				ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
+				return;
+			}
+			//只支持文本格式，不支持二进制消息
+			if(!(frame instanceof TextWebSocketFrame)){
+				needRelease = true;
+				throw new UnsupportedOperationException("仅支持文本格式,当前格式:" + frame.getClass());
+			}
+		}finally {
+			if(needRelease){
+				ReferenceCountUtil.release(frame);
+			}
 		}
-		//ping请求
-		if(frame instanceof PingWebSocketFrame){
-			ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
-			return;
-		}
-		//只支持文本格式，不支持二进制消息
-		if(!(frame instanceof TextWebSocketFrame)){
-			throw new Exception("仅支持文本格式");
-		}
-
-		/*
-		//客服端发送过来的消息
-		String request = ((TextWebSocketFrame) frame).text();
-
-		MogoWsMessage mogoWsMessage = JSONObject.parseObject(request, MogoWsMessage.class);
-
-		System.out.println("服务端收到：" + mogoWsMessage);
-
-		//TODO 在这里做链接成功的处理
-
-		push(ctx, request);
-		*/
 	}
 
 	/**
@@ -159,7 +153,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 		HttpMethod method = req.getMethod();
 		String url = req.uri() == null ? "" : req.uri();
 		String[] loginInfo = resolverCtctIdSouceFromUrl(url);
-		String channelKey = getDefaultChannelKey(ctx);
+		String channelKey = CommonUtil.getRemoteIpFromChannel(ctx);
 		if(loginInfo != null){
 			channelKey = loginInfo[0] + "_" + loginInfo[1];
 		}
@@ -183,13 +177,15 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 		}
 
 		WebSocketServerHandshakerFactory wsFactory
-				= new WebSocketServerHandshakerFactory("ws:/"+ctx.channel()+ "/websocket",null,false);
+				= new WebSocketServerHandshakerFactory("ws:/" + ctx.channel()
+				                                         + "/websocket",null,false);
 		handshaker = wsFactory.newHandshaker(req);
 
 		if(handshaker == null){
 			//不支持
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
 		}else{
+			//够造握手响应消息给客户端, 同时将WebSocket 相关的编解码类动态的添加到ChannelPipeline中.
 			handshaker.handshake(ctx.channel(), req);
 		}
 
@@ -219,8 +215,10 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         return false;
     }
 
-    
-    //异常处理，netty默认是关闭channel
+
+	/**
+	 * 异常处理，netty默认是关闭channel
+	 */
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
 			throws Exception {
@@ -256,20 +254,5 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
 		}
 
 		return pathParams;
-	}
-
-	/**
-	 * 获得默认channelKey, 也就是IP
-	 * @param ctx
-	 * @return
-	 */
-	private String getDefaultChannelKey(ChannelHandlerContext ctx){
-		SocketAddress socketAddress = ctx.channel().remoteAddress();
-		if(socketAddress instanceof InetSocketAddress){
-			InetSocketAddress inetSocketAddress = (InetSocketAddress)socketAddress;
-			return inetSocketAddress.getHostString();
-		}else {
-			return socketAddress.toString();
-		}
 	}
 }

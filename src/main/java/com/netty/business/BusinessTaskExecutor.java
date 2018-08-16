@@ -30,7 +30,7 @@ public class BusinessTaskExecutor {
             1,5L,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), threadFactory);
 
-    private static final BlockingQueue<ITask> FACADE_QUEUE = new LinkedBlockingQueue<ITask>();
+    private static final BlockingQueue<ITask> TASK_QUEUE = new LinkedBlockingQueue<ITask>();
     private void init(){
         taskExecutor.execute(new TeleCommandHandlerTask());
     }
@@ -38,7 +38,7 @@ public class BusinessTaskExecutor {
     public void addTask(ITask task) {
         if(task != null){
             try {
-                FACADE_QUEUE.put(task);
+                TASK_QUEUE.put(task);
             } catch(InterruptedException e) {
                 //logger.error("添加TeleCommand失败", e);
                 //throw new MogoException(AbstractErrorCodes.SYS_ERROR, "添加TeleCommand失败");
@@ -52,7 +52,7 @@ public class BusinessTaskExecutor {
             while (true) {
                 try {
                     //logger.info(Thread.currentThread().getId() + "-try get task");
-                    ITask task = FACADE_QUEUE.take();
+                    ITask task = TASK_QUEUE.take();
                     //logger.info(Thread.currentThread().getId() + "-Sync FACADE_QUEUE size:" + FACADE_QUEUE.size());
                     //logger.info(Thread.currentThread().getId() + "-get one task");
 

@@ -1,6 +1,7 @@
 package com.netty.server.handler;
 
 import com.alibaba.fastjson.JSONObject;
+import com.netty.business.BusinessTaskExecutor;
 import com.netty.message.*;
 import com.netty.server.poster.IPoster;
 import com.netty.server.poster.WsMsgPosterFactory;
@@ -22,7 +23,8 @@ import java.util.Date;
 @Component("textWebSocketFrameHandler")
 @ChannelHandler.Sharable
 public class TextWebSocketFrameHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>{
-	private GlobalEventExecutor executor = GlobalEventExecutor.INSTANCE;
+	//private GlobalEventExecutor executor = GlobalEventExecutor.INSTANCE;
+	private BusinessTaskExecutor executor = BusinessTaskExecutor.getInstance();
 
 	@Override
 	protected void channelRead0(ChannelHandlerContext channelHandlerContext, TextWebSocketFrame msg) throws Exception {
@@ -51,7 +53,7 @@ public class TextWebSocketFrameHandler extends SimpleChannelInboundHandler<TextW
 		//异步投递消息
 		IPoster poster = WsMsgPosterFactory.buildMsgPoster(mogoWsMessage, channelHandlerContext);
 		if(poster != null){
-			executor.execute(poster);
+			executor.addTask(poster);
 		}
 	}
 

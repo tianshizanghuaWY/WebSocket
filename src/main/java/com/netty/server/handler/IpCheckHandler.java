@@ -12,7 +12,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
  * @date 2018-08-13
  */
 public class IpCheckHandler extends ChannelInboundHandlerAdapter{
-    private static volatile boolean removed = false;
+    private static volatile boolean removed = true;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {

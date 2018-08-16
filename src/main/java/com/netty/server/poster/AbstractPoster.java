@@ -16,9 +16,8 @@ public abstract class AbstractPoster implements IPoster{
     }
 
     @Override
-    public void run() {
+    public void execute() {
         try{
-            Thread.sleep(2000);
             post();
         }catch (Exception e){
             e.printStackTrace();

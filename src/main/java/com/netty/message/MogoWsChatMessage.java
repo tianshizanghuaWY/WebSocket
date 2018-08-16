@@ -3,6 +3,8 @@ package com.netty.message;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.netty.util.JsonUtil;
 
+import java.util.Date;
+
 /**
  * websocket - 文本聊天消息
  *
@@ -62,13 +64,23 @@ public class MogoWsChatMessage extends AbstractStatusAwareWsMessage{
         WsMessageEndpoint from = new WsMessageEndpoint();
         from.setCtctId("1");
         from.setCtctIdSource("1");
+        from.setIp("192.168.1.1");
+        from.setName("192.168.1.1");
         WsMessageEndpoint to = new WsMessageEndpoint();
         to.setCtctId("7");
         to.setCtctIdSource("7");
+        to.setIp("192.168.1.1");
+        to.setName("192.168.1.1");
         message.setFrom(from);
         message.setTo(to);
         message.setMessageType(WsMessageEnum.WsMessageType.TEXT);
         message.setMsgBusinessType(WsMessageEnum.WsMsgBusinessType.FIND);
+        message.setMessage("找房信息");
+        message.setId("121212");
+        message.setSendTime(new Date());
+        message.setPostTime(new Date());
+        message.setReadTime(new Date());
+        message.setMessageStatus(WsMessageEnum.WsMessageStatus.READ);
 
         System.out.println(message);
     }

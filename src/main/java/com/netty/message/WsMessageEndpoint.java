@@ -20,7 +20,7 @@ public class WsMessageEndpoint {
     /**
      * 联系人姓名
      */
-    private String conctName;
+    private String name;
     /**
      * ip
      */
@@ -42,12 +42,12 @@ public class WsMessageEndpoint {
         this.ctctIdSource = ctctIdSource;
     }
 
-    public String getConctName() {
-        return conctName;
+    public String getName() {
+        return name;
     }
 
-    public void setConctName(String conctName) {
-        this.conctName = conctName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getIp() {
